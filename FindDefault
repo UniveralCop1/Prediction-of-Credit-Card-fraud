@@ -1,0 +1,148 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split, StratifiedKFold, RandomizedSearchCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score, 
+roc_auc_score, confusion_matrix)
+from scipy.stats import randint, uniform
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.read_csv('Creditcard.csv')
+df.shape
+
+df_info = df.info()
+df_head = df.head()
+df_info, df_head
+
+# Show class distribution
+class_distribution = df['Class'].value_counts(normalize=True)
+
+# Display summary statistics of columns    
+summary_statistics = df.describe()
+class_distribution, summary_statistics
+
+# Set the style
+sns.set(style="whitegrid")
+
+# Visualizing the Class Distribution
+plt.figure(figsize=(6, 4))
+sns.countplot(x='Class', data=df)
+plt.title('Class Distribution')
+plt.xlabel('Class')
+plt.ylabel('Count')
+plt.show()
+
+# Correlation Matrix
+plt.figure(figsize=(14, 10))
+correlation_matrix = df.corr()
+sns.heatmap(correlation_matrix, annot=False, cmap='coolwarm', linewidths=0.5)
+plt.title('Correlation Matrix')
+plt.show()
+
+# Distribution of Amount
+plt.figure(figsize=(8, 4))
+sns.histplot(df['Amount'], bins=50, kde=True)
+plt.title('Distribution of Transaction Amounts')
+plt.xlabel('Amount')
+plt.ylabel('Frequency')
+plt.show()
+
+# Time vs. Amount
+plt.figure(figsize=(12, 6))
+sns.scatterplot(x='Time', y='Amount', data=df, hue='Class', alpha=0.6)
+plt.title('Transaction Amounts over Time')
+plt.xlabel('Time')
+plt.ylabel('Amount')
+plt.show()
+
+# Boxplots and Histograms for Selected Features
+selected_features = ['V1', 'V2', 'V3', 'V4', 'V5']
+plt.figure(figsize=(15, 10))
+for i, feature in enumerate(selected_features, 1):
+    plt.subplot(2, 3, i+1)
+    sns.boxplot(x='Class', y=feature, data=df)
+    plt.title(f'Boxplot of {feature}')
+    
+plt.tight_layout()
+plt.show()
+
+# Histograms
+
+plt.figure(figsize=(15, 10))
+for i, feature in enumerate(selected_features, 1):
+    plt.subplot(2, 3, i)
+    sns.histplot(df[feature], bins=50, kde=True)
+    plt.title(f'Distribution of {feature}')
+    
+plt.tight_layout()
+plt.show()
+
+Fraud = df[df['Class']==1]
+Normal = df[df['Class']==0]
+
+print('Fraud Shape:\t', Fraud.shape)
+print('Normal Shape:\t', Normal.shape)
+
+fraud = df[df['Class'] == 1] # Recovery of fraud data
+plt.figure(figsize=(16,8))
+plt.scatter(fraud['Time'],fraud['Amount']) # Display fraud amounts according to their time
+plt.title('Scratter plot amount fraud')
+plt.xlabel('Time')
+plt.ylabel('Amount')
+plt.xlim([0,175000])
+plt.ylim([0,2500])
+plt.show()
+
+df =df.sample(frac=1)
+
+fraud = df.loc[df['Class'] == 1]
+normal = df.loc[df['Class'] == 0][:492]
+
+normal_distributed_data = pd.concat([fraud, normal])
+
+sample_data = normal_distributed_data.sample(frac=1, random_state=42)
+
+sample_data.head()
+
+#SVM Model Building
+
+X = sample_data.drop('Class', axis=1)
+y = sample_data['Class']
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+from sklearn.svm import SVC
+svm_model = SVC()
+
+import numpy as np
+svm_params = {"C": np.arange(1,10), "kernel":["linear", "rbf"]}
+
+from sklearn.model_selection import GridSearchCV
+svm_cv_model = GridSearchCV(svm_model, svm_params, cv=7, n_jobs=-1, verbose=7).fit(X_train, y_train)
+svm_cv_model.best_score_
+best_params = svm_cv_model.best_params_
+print(best_params)
+svm = SVC(C = best_params['C'], kernel=best_params['kernel'], probability=True).fit(X_train, y_train)
+y_pred_svm = svm.predict(X_test)
+
+from sklearn.metrics import accuracy_score
+accuracy_score(y_test, y_pred_svm)
+
+from sklearn.model_selection import cross_val_score
+cross_val_score(svm, X_test, y_test, cv=21).mean()
+
+from sklearn.metrics import classification_report
+print(classification_report(y_test, y_pred_svm))
+
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(y_test, y_pred_svm)
+sns.heatmap(cm, annot=True, fmt="d", cbar=False)
+plt.title('SVC Confusion Matrix')
+plt.savefig('svc_con_mat')
+plt.show()
+
